@@ -1,5 +1,15 @@
 # ToDo
 
-add tests
-format selection
-make decent `remove_trailing_commas` function
+- add tests
+- format only selection if any
+- make decent `remove_trailing_commas` function @done
+- check with true:
+
+```json
+
+{
+    "enjoying": true
+    //              ^
+    "test": "yes"
+}
+```

@@ -14,26 +14,20 @@ import difflib
 class JsonCommaCommand(sublime_plugin.TextCommand):
 
     """
-    fix json trailing comma.
+    fix json trailing comma and add needed ones
     """
 
     def remove_trailing_commas(self, edit):
         v = self.view
-        if 'json' not in v.settings().get('syntax').lower():
-            return
-        regions = v.find_all(r',(\s*?(//[^\n]*)*)*[\]\}]')
-        selection = v.sel()
-        selection.clear()
-        # return v.sel().add_all(regions)
+        start = 0
+        region = sublime.Region(0)
+        while region is not None and not region.begin() == region.end() == -1:
 
-        for region in regions:
+            region = v.find(r',(\s*?(//[^\n]*)*)*[\]\}]',
+                                region.begin() + 1 if region else 0)
             if 'punctuation' not in v.scope_name(region.begin()):
                 continue
-            selection.add(region)
-
-
-        v.run_command('move', {"by": "characters", "forward": False})
-        v.run_command('right_delete')
+            v.replace(edit, region, v.substr(region)[1:])
 
     def add_needed_comma(self, edit):
         v = self.view
