@@ -2,7 +2,27 @@
 
 JSONComma is a really simple but helpful plugin that, as it's name says, helps managing those damn commas in json.
 
-## It removes trailling comma
+<!-- MarkdownTOC -->
+
+- [Examples:](#examples)
+    - [It removes trailling comma](#it-removes-trailling-comma)
+    - [Adds **needed** commas!](#adds-needed-commas)
+    - [Supports comments](#supports-comments)
+    - [Everything mixed up](#everything-mixed-up)
+- [Usage](#usage)
+    - [Run the command \(`json_comma`\)](#run-the-command-json_comma)
+    - [You want to run this as soon as you save?](#you-want-to-run-this-as-soon-as-you-save)
+- [Installation](#installation)
+    - [Using package control](#using-package-control)
+    - [Using the command line](#using-the-command-line)
+- [Contributing](#contributing)
+
+<!-- /MarkdownTOC -->
+
+
+## Examples:
+
+### It removes trailling comma
 
 ```diff
  {
@@ -12,7 +32,7 @@ JSONComma is a really simple but helpful plugin that, as it's name says, helps m
  }
 ```
 
-## Adds **needed** commas!
+### Adds **needed** commas!
 
 ```diff
  {
@@ -31,7 +51,7 @@ JSONComma is a really simple but helpful plugin that, as it's name says, helps m
  }
 ```
 
-## Supports comments
+### Supports comments
 
 ```diff
  {
@@ -54,7 +74,7 @@ JSONComma is a really simple but helpful plugin that, as it's name says, helps m
  }
 ```
 
-## Everything mixed up
+### Everything mixed up
 
 ```diff
  {
@@ -77,16 +97,34 @@ JSONComma is a really simple but helpful plugin that, as it's name says, helps m
  }
 ```
 
+## Usage
+
+If there is no selection (to be correct, it'd be no *non-empty* selection), it will format the entire file.
+
+### Run the command (`json_comma`)
+
+Open up the command palette and look for `JSONComma: Run`. Hit enter, and you're done!
+
+### You want to run this as soon as you save?
+
+*Pas de probleme!* Add this to your settings:
+
+```json
+"jsoncomma_on_save": true
+```
+
+*Et voila!* Each time you'll save a `JSON` file (or a json-like  — [more info](#json-like)), JSONComma will be run. Enjoy! :smile:
+
 ## Installation
 
 Because it is not available on package control for now, you have to add this repo "manually" to your list.
 
-#### Using package control
+### Using package control
 
 1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/math2001/JSONComma` in the input field.
 2. Open up the command palette again and find `Package Control: Install Package`, and just search for `JSONComma`. (just a normal install)
 
-#### Using the command line
+### Using the command line
 
 ```bash
 cd "%APPDATA%\Sublime Text 3\Packages"             # on window
@@ -102,20 +140,6 @@ It depends of your needs:
 
 - If you intend to just use JSONComma, then pick the first solution (Package Control), **you'll get automatic update**.
 - On the opposite side, if you want to tweak it, use the second solution. Note that, to get updates, you'll have to `git pull`
-
-### Run the command (`json_comma`)
-
-Open up the command palette and look for `JSONComma: Run`. Hit enter, and you're done!
-
-### You want to run this as soon as you save?
-
-*Pas de probleme!* Add this to your settings:
-
-```json
-"jsoncomma_on_save": true
-```
-
-*Et voila!* Each time you'll save a `JSON` file, JSONComma will be run. Enjoy! :smile:
 
 ## Contributing
 
