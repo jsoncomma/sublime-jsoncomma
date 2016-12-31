@@ -4,6 +4,8 @@
         "is": "a"
         "test": "!"
     }
+    "is_math2001": true
+    "place": "Australia"
 }
 --- RESULT ---
 {
@@ -11,5 +13,7 @@
     "this": {
         "is": "a",
         "test": "!"
-    }
+    },
+    "is_math2001": true,
+    "place": "Australia"
 }
