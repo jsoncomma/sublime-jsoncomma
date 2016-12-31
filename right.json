@@ -1,0 +1,9 @@
+{
+    "hello": "world",
+    "not needed": "damn comma",
+    "aList": [
+        "hello", "world",
+        "this", "is", "a nasty ]{ example ] ",
+        ["BUT", "IT", "STILL", "WORKS!!"]
+    ]
+}
