@@ -1,9 +1,9 @@
 {
     "foo": "bar" // hello
     // bar
-    "aList": [ "with", "some" ] // cool
+    "aList": [ "with" "some" ] // cool
     // foo
-    "items": { ":)": "img/emoji/smile.png" },
+    "items": { ":)": "img/emoji/smile.png" }
     // bar
 }
 --- RESULT ---
