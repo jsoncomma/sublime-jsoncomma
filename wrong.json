@@ -1,9 +1,12 @@
 {
     "hello": "world"
-    "not needed": "damn comma"
-    "aList": [
+    // A Comment
+    "not Needed": "damn Comma" // an other
+    // with a second one
+    "alist": [
         "hello" "world"
-        "this" "is" "a nasty ]{ example ] "
-        ["BUT" "IT" "STILL" "WORKS!!"]
+        "this" // a comment
+        "is" "a Nasty ]{ Example ] "
+        ["but" "it" "still" "works!!"]
     ]
 }

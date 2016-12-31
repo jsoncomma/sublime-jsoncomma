@@ -31,6 +31,29 @@ JSONComma is a really simple but helpful plugin that, as it's name says, helps m
  }
 ```
 
+## Supports inline comments
+
+```diff
+ {
+-    "hello": "world"
++    "hello": "world",
+     // A Comment
+-    "not Needed": "damn Comma" // an other
++    "not Needed": "damn Comma", // an other
+     // with a second one
+     "alist": [
+-        "hello" "world"
+-        "this" // a comment
+-        "is" "a Nasty ]{ Example ] "
+-        ["but" "it" "still" "works!!"]
++        "hello", "world",
++        "this", // a comment
++        "is", "a Nasty ]{ Example ] ",
++        ["but", "it", "still", "works!!"]
+     ]
+ }
+```
+
 ## Installation
 
 Because it is not available on package control for now, you have to add this repo "manually" to your list.
