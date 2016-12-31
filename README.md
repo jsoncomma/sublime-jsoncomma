@@ -116,3 +116,22 @@ Open up the command palette and look for `JSONComma: Run`. Hit enter, and you're
 ```
 
 *Et voila!* Each time you'll save a `JSON` file, JSONComma will be run. Enjoy! :smile:
+
+## Contributing
+
+First, you can raise an issue to let me know the bug you've found, the improvement you're thought of, etc... Always raise an issue before you PR me.
+
+If you want to solve this bug/add your feature yourself, here's what I'd like you to do:
+
+- create a new branch `your-feature-name`
+- add your feature
+- run the tests (see bellow). **They must pass**.
+- push and PR me!
+
+#### How to run the test
+
+If you have a look at the code, you'll see that there is a command `json_comma_test`, but it is shown nowhere. It is *wanted*. The final user doesn't care about the test command. So, *it is your job to add it to the command palette, bind it to a shortcut, or if you like to complicate your life, run it from the console* :smile:
+
+Run the command, a new file will popup and automatically close itself straight away. JSONComma needs a file to run the test because it uses the scope names to detect if it needs to add/remove a comma.
+
+The result will be shown it an output panel though.
