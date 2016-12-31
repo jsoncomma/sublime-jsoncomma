@@ -24,8 +24,10 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
         while region is not None and not region.begin() == region.end() == -1:
 
             region = v.find(r',(\s*?(//[^\n]*)*)*[\]\}]',
-                                region.begin() + 1 if region else 0)
-            if 'punctuation' not in v.scope_name(region.begin()):
+                            region.begin() + 1 if region else 0)
+            if ('punctuation' not in v.scope_name(region.begin()) or
+               (v.substr(region.begin()) == '"' and 'punctuation.definition.'
+                'string.end.json' not in v.scope_name(region.begin()))):
                 continue
             v.replace(edit, region, v.substr(region)[1:])
 
@@ -33,15 +35,16 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
         v = self.view
         region = False
         while region is not None:
-            region = v.find(r'[\}\]"]\s*(//[^\n]*\s*)*(/\*(.|\n)*\*/\s*)*\s*["\{\[]',
+            region = v.find(r'[\}\]"el]\s*(//[^\n]*\s*)*\s*["\{\[]',
                             region.begin() + 1 if region else 0)
             if region is None or (region.begin() == -1 and region.end() == -1):
                 region = None
                 continue
-            if not 'punctuation' in v.scope_name(region.begin()):
+            scope = v.scope_name(region.begin())
+            if not 'punctuation' in scope and not 'constant.language' in scope:
                 continue
             if (v.substr(region.begin()) == '"' and 'punctuation.definition.'
-                'string.end.json' not in v.scope_name(region.begin()) ):
+                'string.end.json' not in scope):
                 continue
             text = v.substr(region)
             v.replace(edit, region, text[0] + ',' + text[1:])
@@ -63,7 +66,6 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
             v.sel().add(sublime.Region(v.text_point(col, row)))
 
     def is_enabled(self):
-        return True
         return 'json' in self.view.settings().get('syntax').lower()
 
 class JsonCommaListener(sublime_plugin.EventListener):
@@ -85,7 +87,6 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
             v = self.window.create_output_panel('JSON Comma Testr')
         else:
             v.erase(edit, sublime.Region(0, v.size()))
-        v.settings().set('syntax', 'Packages/Diff/Diff.sublime-syntax')
         self.window.run_command('show_panel', {
             "panel": 'output.JSON Comma Testr'
         })
@@ -111,7 +112,7 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
                 diff = ''.join(diff)
                 fails.append((item, diff))
             test_view.erase(edit, sublime.Region(0, self.view.size()))
-        sublime.set_timeout_async(lambda:self.window.run_command('close'))
+        sublime.set_timeout_async(lambda:self.window.run_command('close'), 500)
 
         answer = ["JSON Comma Testr"]
         answer.append("=" * len(answer[-1]))
