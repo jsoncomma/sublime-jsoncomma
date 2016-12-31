@@ -35,7 +35,7 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
         v = self.view
         region = False
         while region is not None:
-            region = v.find(r'[\}\]"]\s*(//[^\n]*\s*)*\s*["\{\[]',
+            region = v.find(r'[\}\]"]\s*(//[^\n]*\s*)*(/\*(.|\n)*\*/\s*)*\s*["\{\[]',
                             region.begin() + 1 if region else 0)
             if region is None or (region.begin() == -1 and region.end() == -1):
                 region = None

@@ -31,7 +31,7 @@ JSONComma is a really simple but helpful plugin that, as it's name says, helps m
  }
 ```
 
-## Supports inline comments
+## Supports comments
 
 ```diff
  {
@@ -52,6 +52,33 @@ JSONComma is a really simple but helpful plugin that, as it's name says, helps m
 +        ["but", "it", "still", "works!!"]
      ]
  }
+```
+
+## Everything mixed up
+
+```diff
+ {
+-    "name": "JSONComma" // no space allowed in GitHub repository name
+-    "version": "0.1.0" // wait a bit before 1.xxx to detect bugs
++    "name": "JSONComma", // no space allowed in GitHub repository name
++    "version": "0.1.0", // wait a bit before 1.xxx to detect bugs
+     "labels": [
+-        "json" /* in
++        "json", /* in
+         case of a case sensitive
+         host
+         */
+-        "JSON"
+-        "light"
+-        "on_save",
+-    ],
++        "JSON",
++        "light",
++        "on_save"
++    ]
+
+ }
+
 ```
 
 ## Installation
