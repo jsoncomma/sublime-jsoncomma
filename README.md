@@ -1,6 +1,6 @@
 # JSONComma
 
-Json comma is really simple but helpful plugin that, as it's name says, helps managing those damn commas in json.
+JSONComma is a really simple but helpful plugin that, as it's name says, helps managing those damn commas in json.
 
 ## It removes trailling comma
 
@@ -33,9 +33,9 @@ Json comma is really simple but helpful plugin that, as it's name says, helps ma
 
 ## Installation
 
-#### Using package control
-
 Because it is not available on package control for now, you have to add this repo "manually" to your list.
+
+#### Using package control
 
 1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/math2001/JSONComma` in the input field.
 2. Open up the command palette again and find `Package Control: Install Package`, and just search for `JSONComma`. (just a normal install)
@@ -50,13 +50,23 @@ cd ~/.config/sublime-text-3                        # on linux
 git clone "https://github.com/math2001/JSONComma"
 ```
 
+> Which solution do I choose?
 
-You want to run this as soon as you save? *Pas de probleme!*
+It depends of your needs:
 
-Add this to your settings:
+- If you intend to just use JSONComma, then pick the first solution (Package Control), **you'll get automatic update**.
+- On the opposite side, if you want to tweak it, use the second solution. Note that, to get updates, you'll have to `git pull`
+
+### Run the command (`json_comma`)
+
+Open up the command palette and look for `JSONComma: Run`. Hit enter, and you're done!
+
+### You want to run this as soon as you save?
+
+*Pas de probleme!* Add this to your settings:
 
 ```json
 "jsoncomma_on_save": true
 ```
 
-*Et voila!* Enjoy! :smile:
+*Et voila!* Each time you'll save a `JSON` file, JSONComma will be run. Enjoy! :smile:
