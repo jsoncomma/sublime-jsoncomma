@@ -21,14 +21,16 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
         v = self.view
         if 'json' not in v.settings().get('syntax').lower():
             return
-        regions = v.find_all(r'(\s*?(//[^\n]*)*)*[\]\}]')
+        regions = v.find_all(r',(\s*?(//[^\n]*)*)*[\]\}]')
         selection = v.sel()
         selection.clear()
+        # return v.sel().add_all(regions)
 
         for region in regions:
             if 'punctuation' not in v.scope_name(region.begin()):
                 continue
             selection.add(region)
+
 
         v.run_command('move', {"by": "characters", "forward": False})
         v.run_command('right_delete')
@@ -110,7 +112,6 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
             actual = test_view.substr(sublime.Region(0, test_view.size()))
 
             if actual != expected:
-                print("json_comma.py:108", expected.splitlines(keepends=True))
                 diff = difflib.ndiff(expected.splitlines(keepends=True),
                                      actual.splitlines(keepends=True))
                 diff = ''.join(diff)

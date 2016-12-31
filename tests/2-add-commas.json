@@ -1,0 +1,15 @@
+{
+    "hello": ["world" "!"]
+    "this": {
+        "is": "a"
+        "test": "!"
+    }
+}
+--- RESULT ---
+{
+    "hello": ["world", "!"],
+    "this": {
+        "is": "a",
+        "test": "!"
+    }
+}
