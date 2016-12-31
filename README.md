@@ -37,8 +37,8 @@ Json comma is really simple but helpful plugin that, as it's name says, helps ma
 
 Because it is not available on package control for now, you have to add this repo "manually" to your list.
 
-1. open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/math2001/JSONComma` in the input field.
-2. open up the command palette again and find `Package Control: Install Package`, and just search for `JSONComma`. (just a normal install)
+1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/math2001/JSONComma` in the input field.
+2. Open up the command palette again and find `Package Control: Install Package`, and just search for `JSONComma`. (just a normal install)
 
 #### Using the command line
 
