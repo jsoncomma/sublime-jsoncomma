@@ -21,7 +21,7 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
         v = self.view
         if 'json' not in v.settings().get('syntax').lower():
             return
-        regions = v.find_all(r',\s*[\]\}]')
+        regions = v.find_all(r'(\s*?(//[^\n]*)*)*[\]\}]')
         selection = v.sel()
         selection.clear()
 
@@ -79,12 +79,21 @@ class JsonCommaListener(sublime_plugin.EventListener):
 class JsonCommaTestCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
-        v = self.view
-        if v.size() > 0:
-            return sublime.error_message("JSONComma tests are, for global "
-                                         "performance reasons, going to use "
-                                         "the current view. Please create a"
-                                         "new empty one. (File -> New File)")
+        self.window = self.view.window()
+
+        test_view = self.window.new_file()
+        test_view.set_scratch(True)
+
+        v = self.window.find_output_panel('JSON Comma Testr')
+        if v is None:
+            v = self.window.create_output_panel('JSON Comma Testr')
+        else:
+            v.erase(edit, sublime.Region(0, v.size()))
+        v.settings().set('syntax', 'Packages/Diff/Diff.sublime-syntax')
+        self.window.run_command('show_panel', {
+            "panel": 'output.JSON Comma Testr'
+        })
+
 
         tests_dir = os.path.join(os.path.dirname(__file__), 'tests')
         nb_tests, fails = 0, []
@@ -94,21 +103,22 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
                 content = fp.read()
 
             base, expected = content.split('--- RESULT ---\n')
-            v.insert(edit, 0, base)
-            v.settings().set('syntax',
+            test_view.insert(edit, 0, base)
+            test_view.settings().set('syntax',
                                      'Packages/JavaScript/JSON.sublime-syntax')
-            JsonCommaCommand(v).run(edit)
-            actual = v.substr(sublime.Region(0, v.size()))
+            JsonCommaCommand(test_view).run(edit)
+            actual = test_view.substr(sublime.Region(0, test_view.size()))
 
             if actual != expected:
-                diff = difflib.ndiff(actual.splitlines(keepends=True),
-                                     expected.splitlines(keepends=True))
-                diff = list(filter(lambda line: not line.startswith('?'),
-                                   diff))
+                print("json_comma.py:108", expected.splitlines(keepends=True))
+                diff = difflib.ndiff(expected.splitlines(keepends=True),
+                                     actual.splitlines(keepends=True))
                 diff = ''.join(diff)
-                fails.append(diff)
+                fails.append((item, diff))
+            test_view.erase(edit, sublime.Region(0, self.view.size()))
+        sublime.set_timeout_async(lambda:self.window.run_command('close'))
 
-        answer = ["JSONCommaTestr"]
+        answer = ["JSON Comma Testr"]
         answer.append("=" * len(answer[-1]))
         answer.append('')
         answer.append('On {} test{}, {} '
@@ -116,9 +126,11 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
                                       's' if nb_tests > 1 else '',
                                       len(fails)))
         if len(fails) > 0:
+            answer.append('')
             answer.append('Fails')
-            answer.append('-' * len(answer[-1]))
+            answer.append('~' * len(answer[-1]))
             for fail in fails:
-                answer.append(fail)
-        v.erase(edit, sublime.Region(0, self.view.size()))
+                answer += ['',
+                           '@@ ' + fail[0] + ' @@',
+                           fail[1]]
         v.insert(edit, 0, '\n'.join(answer))
