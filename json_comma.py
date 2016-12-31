@@ -11,62 +11,101 @@ import sublime_plugin
 import os
 import difflib
 
+def any_(iterable, key, *args):
+    for item in iterable:
+        if key(item, *args):
+            return True
+    return False
+
 class JsonCommaCommand(sublime_plugin.TextCommand):
 
     """
     fix json trailing comma and add needed ones
     """
 
-    def remove_trailing_commas(self, edit):
+    # used to replace only in current selections
+    allowed = lambda allowed_region, region: (
+                allowed_region.empty() or sublime.Region(
+                                   allowed_region.begin() - 1,
+                                   allowed_region.end() + 1).contains(region))
+
+    def remove_trailing_commas(self, edit, regions):
         v = self.view
-        start = 0
-        region = sublime.Region(0)
+        start, end = 0, None
+        if regions is not None:
+            start = min(regions, key=lambda region: region.begin()).begin()
+            end = max(regions, key=lambda region: region.end()).end()
+        region = sublime.Region(start)
+
         while region is not None and not region.begin() == region.end() == -1:
 
-            region = v.find(r',(\s*?(//[^\n]*)*)*[\]\}]',
-                            region.begin() + 1 if region else 0)
+            region = v.find(r',(\s*?(//[^\n]*)*)*[\]\}]', region.begin())
+            if regions is not None:
+                if region.end() > end:
+                    return
+                if not any_(regions, JsonCommaCommand.allowed, region):
+                    continue
             if ('punctuation' not in v.scope_name(region.begin()) or
                (v.substr(region.begin()) == '"' and 'punctuation.definition.'
                 'string.end.json' not in v.scope_name(region.begin()))):
                 continue
             v.replace(edit, region, v.substr(region)[1:])
 
-    def add_needed_comma(self, edit):
+    def add_needed_comma(self, edit, regions=None):
         v = self.view
-        region = False
+        start, end = 0, None
+        if regions is not None:
+            start = min(regions, key=lambda region: region.begin()).begin()
+            end = max(regions, key=lambda region: region.end()).end()
+        region = sublime.Region(start)
+
         while region is not None:
             region = v.find(r'[\}\]"el]\s*(//[^\n]*\s*)*\s*["\{\[]',
                             region.begin() + 1 if region else 0)
-            if region is None or (region.begin() == -1 and region.end() == -1):
+
+            if region is None or region.begin() == region.end() == -1:
                 region = None
                 continue
+
+            if regions is not None:
+                if region.end() > end:
+                    return
+                if not any_(regions, JsonCommaCommand.allowed, region):
+                    continue
+
             scope = v.scope_name(region.begin())
             if not 'punctuation' in scope and not 'constant.language' in scope:
                 continue
             if (v.substr(region.begin()) == '"' and 'punctuation.definition.'
                 'string.end.json' not in scope):
                 continue
+
             text = v.substr(region)
             v.replace(edit, region, text[0] + ',' + text[1:])
 
     def run(self, edit):
         v = self.view
         initial_colrows = []
-        for region in v.sel():
+        sels = v.sel()
+        has_non_empty_region = False
+        for region in sels:
             initial_colrows.append(v.rowcol(region.begin()))
+            if not region.empty():
+                has_non_empty_region = True
 
-        self.add_needed_comma(edit)
-        self.remove_trailing_commas(edit)
+        self.add_needed_comma(edit, sels if has_non_empty_region else None)
+        self.remove_trailing_commas(edit, sels if has_non_empty_region else None)
+        return
 
-        v.sel().clear()
+        sels.clear()
         for col, row in initial_colrows:
             line_length = len(v.substr(v.line(sublime.Region(v.text_point(col, 0)))))
             if row > line_length:
                 row = line_length
-            v.sel().add(sublime.Region(v.text_point(col, row)))
+            sels.add(sublime.Region(v.text_point(col, row)))
 
     def is_enabled(self):
-        return 'json' in self.view.settings().get('syntax').lower()
+        return 'json' in self.view.scope_name(self.view.sel()[0].begin())
 
 class JsonCommaListener(sublime_plugin.EventListener):
 
@@ -87,6 +126,7 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
             v = self.window.create_output_panel('JSON Comma Testr')
         else:
             v.erase(edit, sublime.Region(0, v.size()))
+        v.assign_syntax('Packages/Diff/Diff.sublime-syntax')
         self.window.run_command('show_panel', {
             "panel": 'output.JSON Comma Testr'
         })
