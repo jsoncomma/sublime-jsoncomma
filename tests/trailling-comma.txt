@@ -1,0 +1,11 @@
+{
+    "foo": "bar",
+    "aList": [ "with", "some", ]
+    "items": { ":)": "img/emoji/smile.png", },
+}
+--- RESULT ---
+{
+    "foo": "bar",
+    "aList": [ "with", "some" ],
+    "items": { ":)": "img/emoji/smile.png" }
+}
