@@ -112,7 +112,6 @@ class JsonCommaListener(sublime_plugin.EventListener):
 
     def on_pre_save(self, view):
         if view.settings().get('jsoncomma_on_save', False) is True:
-            return
             view.run_command('json_comma')
 
 class JsonCommaTestCommand(sublime_plugin.TextCommand):
