@@ -17,6 +17,8 @@ def any_(iterable, key, *args):
             return True
     return False
 
+DEBUG = False
+
 class JsonCommaCommand(sublime_plugin.TextCommand):
 
     """
@@ -39,7 +41,7 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
 
         while region is not None and not region.begin() == region.end() == -1:
 
-            region = v.find(r',(\s*?(//[^\n]*)*)*[\]\}]', region.begin() + 1)
+            region = v.find(r',((\s*//[^\n]*)*\n)?\s*[\]\}]', region.begin() + 1)
             if regions is not None:
                 if region.end() > end:
                     return
@@ -95,7 +97,6 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
 
         self.add_needed_comma(edit, sels if has_non_empty_region else None)
         self.remove_trailing_commas(edit, sels if has_non_empty_region else None)
-        return
 
         sels.clear()
         for col, row in initial_colrows:
@@ -111,6 +112,7 @@ class JsonCommaListener(sublime_plugin.EventListener):
 
     def on_pre_save(self, view):
         if view.settings().get('jsoncomma_on_save', False) is True:
+            return
             view.run_command('json_comma')
 
 class JsonCommaTestCommand(sublime_plugin.TextCommand):
@@ -141,9 +143,8 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
 
             base, expected = content.split('--- RESULT ---\n')
             test_view.insert(edit, 0, base)
-            test_view.settings().set('syntax',
-                                     'Packages/JavaScript/JSON.sublime-syntax')
-            JsonCommaCommand(test_view).run(edit)
+            test_view.assign_syntax('Packages/JavaScript/JSON.sublime-syntax')
+            test_view.run_command('json_comma')
             actual = test_view.substr(sublime.Region(0, test_view.size()))
 
             if actual != expected:
@@ -165,8 +166,12 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
             answer.append('')
             answer.append('Fails')
             answer.append('~' * len(answer[-1]))
+            answer += ['', '- expected', '+ actual', '']
             for fail in fails:
                 answer += ['',
                            '@@ ' + fail[0] + ' @@',
                            fail[1]]
         v.insert(edit, 0, '\n'.join(answer))
+
+    def is_visible(self):
+        return DEBUG

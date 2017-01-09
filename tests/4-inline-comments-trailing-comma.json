@@ -3,8 +3,8 @@
     // bar
     "aList": [ "with", "some", ], // cool
     // foo
-    "items": { ":)": "img/emoji/smile.png", },
-    // bar
+    "items": { ":)": "img/emoji/smile.png" },
+    // { "thanks": "to #1" },
 }
 --- RESULT ---
 {
@@ -13,5 +13,5 @@
     "aList": [ "with", "some" ], // cool
     // foo
     "items": { ":)": "img/emoji/smile.png" }
-    // bar
+    // { "thanks": "to #1" },
 }

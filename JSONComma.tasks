@@ -1,0 +1,14 @@
+Fast:
+
+Medium:
+  ☐ support several test in one file
+
+Long:
+  ☐ add tests                                      @WIP
+
+
+＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
+Archive:
+ ✔ check with constants (`true`, `false`, `null`) @done Mon 02 Jan 2017 at 22:05 @project(Fast)
+ ✔ format only selection if any @needsTest @done Mon 02 Jan 2017 at 22:06 @project(Medium)
+ ✔ make decent `remove_trailing_commas` function @done Mon 02 Jan 2017 at 22:05 @project(Medium)
