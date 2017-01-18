@@ -43,7 +43,7 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
 
             region = v.find(r',((\s*//[^\n]*)*\n)?\s*[\]\}]', region.begin() + 1)
             if region is None:
-                continue
+                return
 
             if regions is not None:
                 if region.end() > end:
@@ -70,8 +70,7 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
                             region.begin() + 1 if region else 0)
 
             if region is None or region.begin() == region.end() == -1:
-                region = None
-                continue
+                return
 
             if regions is not None:
                 if region.end() > end:
@@ -115,7 +114,7 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
 class JsonCommaListener(sublime_plugin.EventListener):
 
     def on_pre_save(self, view):
-        if view.settings().get('jsoncomma_on_save', False) is True:
+        if view.settings().get('jsoncomma_on_save') is True:
             view.run_command('json_comma')
 
 class JsonCommaTestCommand(sublime_plugin.TextCommand):
@@ -161,10 +160,8 @@ class JsonCommaTestCommand(sublime_plugin.TextCommand):
         answer = ["JSON Comma Testr"]
         answer.append("=" * len(answer[-1]))
         answer.append('')
-        answer.append('On {} test{}, {} '
-                      'failed'.format(nb_tests,
-                                      's' if nb_tests > 1 else '',
-                                      len(fails)))
+        answer.append('On {} test{}, {} failed'.format(nb_tests, 's' if nb_tests > 1 else '',
+                                                       len(fails)))
         if len(fails) > 0:
             answer.append('')
             answer.append('Fails')
