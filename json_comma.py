@@ -42,13 +42,15 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
         while region is not None and not region.begin() == region.end() == -1:
 
             region = v.find(r',((\s*//[^\n]*)*\n)?\s*[\]\}]', region.begin() + 1)
+            if region is None:
+                continue
+
             if regions is not None:
                 if region.end() > end:
                     return
                 if not any_(regions, JsonCommaCommand.allowed, region):
                     continue
-            else:
-                continue
+
             if ('punctuation' not in v.scope_name(region.begin()) or
                (v.substr(region.begin()) == '"' and 'punctuation.definition.' + \
                 'string.end.json' not in v.scope_name(region.begin()))):
