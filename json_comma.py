@@ -47,8 +47,10 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
                     return
                 if not any_(regions, JsonCommaCommand.allowed, region):
                     continue
+            else:
+                continue
             if ('punctuation' not in v.scope_name(region.begin()) or
-               (v.substr(region.begin()) == '"' and 'punctuation.definition.'
+               (v.substr(region.begin()) == '"' and 'punctuation.definition.' + \
                 'string.end.json' not in v.scope_name(region.begin()))):
                 continue
             v.replace(edit, region, v.substr(region)[1:])
@@ -78,7 +80,7 @@ class JsonCommaCommand(sublime_plugin.TextCommand):
             scope = v.scope_name(region.begin())
             if not 'punctuation' in scope and not 'constant.language' in scope:
                 continue
-            if (v.substr(region.begin()) == '"' and 'punctuation.definition.'
+            if (v.substr(region.begin()) == '"' and 'punctuation.definition.' + \
                 'string.end.json' not in scope):
                 continue
 
