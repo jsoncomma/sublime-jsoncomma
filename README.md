@@ -121,13 +121,9 @@ Because it is not available on package control for now, you have to add this rep
 
 ### Using package control
 
-1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/math2001/JSONComma` in the input field.
-2. Open up the command palette again and find `Package Control: Install Package`, and just search for `JSONComma`. (just a normal install)
-
-1. Open up the command palette (`ctrl+shift+p`)
-2. search for `Package Control: Install Package` (might take a few seconds)
-3. search for `JSONComma`
-4. hit <kbd>enter</kbd> :wink:
+1. search for `Package Control: Install Package` in the command palette — <kbd>ctrl+shift+p</kbd> (might take a few seconds)
+2. search for `JSONComma`
+3. hit <kbd>enter</kbd> :wink:
 
 ### Using the command line
 
