@@ -1,177 +1,173 @@
-"""
-
-Removes unwanted commas, and add needed ones
-
-By math2001
-
-"""
-
+import os.path
+import json
+import subprocess
 import sublime
 import sublime_plugin
-import os
-import difflib
+import requests
 
-def any_(iterable, key, *args):
-    for item in iterable:
-        if key(item, *args):
-            return True
-    return False
+SETTINGS = "JSONComma.sublime-settings"
+SETTINGS_EXECUTABLE = "executable_path"
+SETTING_VIEW_ENABLED = "jsoncomma_enabled"
 
-DEBUG = False
 
-class JsonCommaCommand(sublime_plugin.TextCommand):
+def notify(format, *args, **kwargs):
+    message = "JSONComma: " + format.format(*args, **kwargs)
+    print(message)
+    sublime.status_message(message)
 
-    """
-    fix json trailing comma and add needed ones
-    """
 
-    # used to replace only in current selections
-    allowed = lambda allowed_region, region: (
-                allowed_region.empty() or sublime.Region(
-                                   allowed_region.begin() - 1,
-                                   allowed_region.end() + 1).contains(region))
+class server:
+    process = None
+    infos = None
 
-    def remove_trailing_commas(self, edit, regions):
-        v = self.view
-        start, end = 0, None
-        if regions is not None:
-            start = min(regions, key=lambda region: region.begin()).begin()
-            end = max(regions, key=lambda region: region.end()).end()
-        region = sublime.Region(start)
+    @classmethod
+    def assert_ready(cls):
+        assert cls.process is not None, "the server process isn't running"
+        assert (
+            cls.infos is not None
+        ), "still gathering information about the server's address"
 
-        while region is not None and not region.begin() == region.end() == -1:
+    @classmethod
+    def start(cls):
+        try:
+            cls.assert_ready()
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError(
+                "server already running. process: {} infos: {}".format(
+                    cls.process, cls.infos
+                )
+            )
 
-            region = v.find(r',((\s*//[^\n]*)*\n)?\s*[\]\}]', region.begin() + 1)
-            if region is None:
-                return
+        executable = sublime.load_settings(SETTINGS).get(SETTINGS_EXECUTABLE)
+        executable = os.path.expanduser(executable)
 
-            if regions is not None:
-                if region.end() > end:
-                    return
-                if not any_(regions, JsonCommaCommand.allowed, region):
-                    continue
+        cls.process = subprocess.Popen(
+            [executable, "server", "-port", "0"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        line = cls.process.stdout.readline().decode("utf-8")
+        try:
+            cls.infos = json.loads(line)
+        except ValueError as e:
+            sublime.error_message(
+                "Failed to start jsoncomma server.\n\n{}\n\nMore details in the console",
+                e,
+            )
+            raise e
 
-            if ('punctuation' not in v.scope_name(region.begin()) or
-               (v.substr(region.begin()) == '"' and 'punctuation.definition.' + \
-                'string.end.json' not in v.scope_name(region.begin()))):
-                continue
-            v.replace(edit, region, v.substr(region)[1:])
+        assert "addr" in cls.infos, "server infos should include 'addr' ({})".format(
+            cls.infos
+        )
+        assert "port" in cls.infos, "server infos should include 'port' ({})".format(
+            cls.infos
+        )
+        assert "host" in cls.infos, "server infos should include 'host' ({})".format(
+            cls.infos
+        )
 
-    def add_needed_comma(self, edit, regions=None):
-        v = self.view
-        start, end = 0, None
-        if regions is not None:
-            start = min(regions, key=lambda region: region.begin()).begin()
-            end = max(regions, key=lambda region: region.end()).end()
-        region = sublime.Region(start)
+    @classmethod
+    def stop(cls):
+        assert cls.process is not None, "no server running"
+        cls.process.terminate()
+        try:
+            cls.process.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            notify("had to kill (SIGKILL) process after 1 second timeout")
+            cls.process.kill()
 
-        while region is not None:
-            region = v.find(r'[\}\]"el]\s*(//[^\n]*\s*)*\s*["\{\[]',
-                            region.begin() + 1 if region else 0)
+        cls.process = None
+        cls.infos = None
 
-            if region is None or region.begin() == region.end() == -1:
-                return
+    @classmethod
+    def fix(cls, json_to_fix):
 
-            if regions is not None:
-                if region.end() > end:
-                    return
-                if not any_(regions, JsonCommaCommand.allowed, region):
-                    continue
+        try:
+            resp = requests.post("http://" + server.infos["addr"], data=json_to_fix)
+        except requests.exceptions.ConnectionError as e:
+            notify("connection error with server ({})", e)
+            return
 
-            scope = v.scope_name(region.begin())
-            if not 'punctuation' in scope and not 'constant.language' in scope:
-                continue
-            if (v.substr(region.begin()) == '"' and 'punctuation.definition.' + \
-                'string.end.json' not in scope):
-                continue
+        if resp.status_code != 200:
+            print("response from JSONComma server:")
+            print(resp)
+            notify(
+                "invalid response code from server (got {}, expected 200)",
+                resp.status_code,
+            )
+            return
 
-            text = v.substr(region)
-            v.replace(edit, region, text[0] + ',' + text[1:])
+        if resp.headers["Content-Type"] != "text/plain; charset=utf-8":
+            print("response from JSONComma server:")
+            print(resp)
+            notify(
+                "invalid header 'Content-Type' (got {!r}, expected 'text/plain; charset=utf-8')",
+                resp.headers["Content-Type"],
+            )
+            return
 
-    def run(self, edit):
-        v = self.view
-        initial_colrows = []
-        sels = v.sel()
-        has_non_empty_region = False
-        for region in sels:
-            initial_colrows.append(v.rowcol(region.begin()))
-            if not region.empty():
-                has_non_empty_region = True
+        return resp.text
 
-        self.add_needed_comma(edit, sels if has_non_empty_region else None)
-        self.remove_trailing_commas(edit, sels if has_non_empty_region else None)
 
-        sels.clear()
-        for col, row in initial_colrows:
-            line_length = len(v.substr(v.line(sublime.Region(v.text_point(col, 0)))))
-            if row > line_length:
-                row = line_length
-            sels.add(sublime.Region(v.text_point(col, row)))
+def should_be_enabled(*, filename=None, syntax=None):
+    assert (
+        isinstance(filename, str) or filename is None
+    ), "filename should be a string or None"
+    assert isinstance(syntax, str), "syntax should be a string"
+    return "json" in syntax.lower()
+
+
+def plugin_loaded():
+    server.start()
+    sublime.status_message(
+        "JSONComma: server started on {}".format(server.infos["addr"])
+    )
+
+
+def plugin_unloaded():
+    sublime.status_message("JSONCOMma: server stopped")
+    server.stop()
+
+
+class JsonCommaListener(sublime_plugin.ViewEventListener):
+    @classmethod
+    def is_applicable(cls, settings):
+        return should_be_enabled(filename=None, syntax=settings.get("syntax"))
+
+    @classmethod
+    def applies_to_primary_view_only(cls):
+        return False
+
+    def on_pre_save(self):
+        try:
+            server.assert_ready()
+        except AssertionError as e:
+            notify("couldn't fix {}, {}", self.view.file_name(), e.args[0])
+
+        self.view.run_command("jsoncomma_fix", {"ranges": [(0, self.view.size())]})
+
+
+class JsoncommaFixCommand(sublime_plugin.TextCommand):
+    def run(self, edit, ranges=None):
+        if ranges is not None:
+            regions = (sublime.Region(*range) for range in ranges)
+        else:
+            regions = self.view.sel()
+
+        for region in regions:
+            self.view.replace(edit, region, server.fix(self.view.substr(region)))
 
     def is_enabled(self):
-        return 'json' in self.view.scope_name(self.view.sel()[0].begin())
+        has_non_empty_cell = False
+        for region in self.view.sel():
+            if not region.empty():
+                has_non_empty_cell = True
 
-class JsonCommaListener(sublime_plugin.EventListener):
-
-    def on_pre_save(self, view):
-        if view.settings().get('jsoncomma_on_save') is True:
-            view.run_command('json_comma')
-
-class JsonCommaTestCommand(sublime_plugin.TextCommand):
-
-    def run(self, edit):
-        self.window = self.view.window()
-
-        test_view = self.window.new_file()
-        test_view.set_scratch(True)
-
-        v = self.window.find_output_panel('JSON Comma Testr')
-        if v is None:
-            v = self.window.create_output_panel('JSON Comma Testr')
-        else:
-            v.erase(edit, sublime.Region(0, v.size()))
-        v.assign_syntax('Packages/Diff/Diff.sublime-syntax')
-        self.window.run_command('show_panel', {
-            "panel": 'output.JSON Comma Testr'
-        })
-
-
-        tests_dir = os.path.join(os.path.dirname(__file__), 'tests')
-        nb_tests, fails = 0, []
-        for item in os.listdir(tests_dir):
-            nb_tests += 1
-            with open(os.path.join(tests_dir, item)) as fp:
-                content = fp.read()
-
-            base, expected = content.split('--- RESULT ---\n')
-            test_view.insert(edit, 0, base)
-            test_view.assign_syntax('Packages/JavaScript/JSON.sublime-syntax')
-            test_view.run_command('json_comma')
-            actual = test_view.substr(sublime.Region(0, test_view.size()))
-
-            if actual != expected:
-                diff = difflib.ndiff(expected.splitlines(keepends=True),
-                                     actual.splitlines(keepends=True))
-                diff = ''.join(diff)
-                fails.append((item, diff))
-            test_view.erase(edit, sublime.Region(0, self.view.size()))
-        sublime.set_timeout_async(lambda:self.window.run_command('close'), 500)
-
-        answer = ["JSON Comma Testr"]
-        answer.append("=" * len(answer[-1]))
-        answer.append('')
-        answer.append('On {} test{}, {} failed'.format(nb_tests, 's' if nb_tests > 1 else '',
-                                                       len(fails)))
-        if len(fails) > 0:
-            answer.append('')
-            answer.append('Fails')
-            answer.append('~' * len(answer[-1]))
-            answer += ['', '- expected', '+ actual', '']
-            for fail in fails:
-                answer += ['',
-                           '@@ ' + fail[0] + ' @@',
-                           fail[1]]
-        v.insert(edit, 0, '\n'.join(answer))
+        return has_non_empty_cell or should_be_enabled(
+            filename=self.view.file_name(), syntax=self.view.settings().get("syntax"),
+        )
 
     def is_visible(self):
-        return DEBUG
+        return self.is_enabled()

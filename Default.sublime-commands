@@ -1,0 +1,14 @@
+[
+    {
+        "caption": "Preferences: JSONComma Settings",
+        "command": "edit_settings",
+        "args": {
+            "base_file": "${packages}/JSONComma/JSONComma.sublime-settings",
+            "default": "// Your settings for JSONComma. See the default file to see the different options. \n{\n\t$0\n}\n"
+        }
+    },
+    {
+        "caption": "JSONComma: Fix Selection",
+        "command": "jsoncomma_fix"
+    }
+]
