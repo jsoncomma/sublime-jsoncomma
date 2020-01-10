@@ -133,19 +133,21 @@ def should_be_enabled(*, filename, syntax, scope):
 # really cheap to cache (a pair of strings)
 @lru_cache()
 def get_syntax_name(syntax):
+    # FIXME: is there a cheap way to support .tmLanguage files?
+    # there is going to be fewer and fewer of them anyway...
+    if not syntax.endswith(".sublime-syntax"):
+        return ""
+
     content = sublime.load_resource(syntax)
     for i, line in enumerate(content.splitlines()):
-        if i >= 10:
-            # we look for the `name: ` line in the first 10 lines
-            return False
         # assume it's somewhat decently formated. No people going `name  :`
         # for example
         if line.startswith("name:") or line.startswith("name :"):
             return line
 
-    # there is less than 10 lines, and none of them contain a the text "name: ".
+    # none of the lines contain a the text "name: ".
     # it's weird that it is even allowed to be a syntax...
-    return False
+    return ""
 
 
 def plugin_loaded():
@@ -156,7 +158,7 @@ def plugin_loaded():
 
 
 def plugin_unloaded():
-    sublime.status_message("JSONCOMma: server stopped")
+    sublime.status_message("JSONComma: server stopped")
     server.stop()
 
 
