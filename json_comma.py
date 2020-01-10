@@ -4,6 +4,7 @@ import subprocess
 import sublime
 import sublime_plugin
 import requests
+from functools import lru_cache
 
 SETTINGS = "JSONComma.sublime-settings"
 SETTINGS_EXECUTABLE = "executable_path"
@@ -111,12 +112,40 @@ class server:
         return resp.text
 
 
-def should_be_enabled(*, filename=None, syntax=None):
-    assert (
-        isinstance(filename, str) or filename is None
-    ), "filename should be a string or None"
+def should_be_enabled(*, filename, syntax, scope):
+    assert isinstance(filename, str), "filename should be a string"
     assert isinstance(syntax, str), "syntax should be a string"
-    return "json" in syntax.lower()
+    assert isinstance(scope, str), "scope should be a string"
+
+    # notice how this logic could be handled by the server...
+    # would it make sense to outsource this? No, because
+    # this behavior is editor dependent.
+    return (
+        "json" in syntax.lower()
+        or "json" in scope.lower()
+        or "json" in filename.split(".")[-1].lower()
+        # this is the most expensive check, hence it's used last
+        or "json" in get_syntax_name(syntax).lower()
+    )
+
+
+# this is quite an expensive function, and it's
+# really cheap to cache (a pair of strings)
+@lru_cache()
+def get_syntax_name(syntax):
+    content = sublime.load_resource(syntax)
+    for i, line in enumerate(content.splitlines()):
+        if i >= 10:
+            # we look for the `name: ` line in the first 10 lines
+            return False
+        # assume it's somewhat decently formated. No people going `name  :`
+        # for example
+        if line.startswith("name:") or line.startswith("name :"):
+            return line
+
+    # there is less than 10 lines, and none of them contain a the text "name: ".
+    # it's weird that it is even allowed to be a syntax...
+    return False
 
 
 def plugin_loaded():
@@ -134,7 +163,13 @@ def plugin_unloaded():
 class JsonCommaListener(sublime_plugin.ViewEventListener):
     @classmethod
     def is_applicable(cls, settings):
-        return should_be_enabled(filename=None, syntax=settings.get("syntax"))
+        explicit = settings.get(SETTING_VIEW_ENABLED)
+        if explicit is False:
+            return False
+        elif explicit is True:
+            return True
+
+        return should_be_enabled(filename="", syntax=settings.get("syntax"), scope="")
 
     @classmethod
     def applies_to_primary_view_only(cls):
@@ -166,7 +201,12 @@ class JsoncommaFixCommand(sublime_plugin.TextCommand):
                 has_non_empty_cell = True
 
         return has_non_empty_cell or should_be_enabled(
-            filename=self.view.file_name(), syntax=self.view.settings().get("syntax"),
+            filename=self.view.file_name(),
+            syntax=self.view.settings().get("syntax"),
+            # look at the scope at the end of the file, because it's likely that
+            # it'll be where there is a line return (hence the scope will only
+            # be the scope name of the general file)
+            scope=self.view.scope_name(self.view.size()),
         )
 
     def is_visible(self):
