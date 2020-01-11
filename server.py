@@ -248,11 +248,12 @@ def confirm_automatic_download(current_path):
     # I'm not sure how I can make it clear that this is a one time thing.
     # if the user wants to update the server, he will have to do so manually
     return sublime.ok_cancel_dialog(
-        "The jsoncomma server was not found at {}. ".format(current_path)
+        "The jsoncomma server was not found at '{}'. ".format(current_path)
         + "However, it needs to be installed for JSONComma to work. More "
         "details can be found at https://jsoncomma.github.io"
         "\n\n"
-        "Do you want JSONComma to install it for you?"
+        "Do you want JSONComma to install it for you?",
+        "Download jsoncomma for me",
     )
 
 
