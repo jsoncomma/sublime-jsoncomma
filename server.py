@@ -85,7 +85,7 @@ class server:
         )
 
         sublime.status_message(
-            "JSONComma: server started on {}".format(server.infos["addr"])
+            "JSONComma: server started on {}".format(cls.infos["addr"])
         )
 
     @classmethod
@@ -115,10 +115,10 @@ class server:
 
     @classmethod
     def fix(cls, json_to_fix):
-        server.assert_ready()
+        cls.assert_ready()
 
         try:
-            resp = requests.post("http://" + server.infos["addr"], data=json_to_fix)
+            resp = requests.post("http://" + cls.infos["addr"], data=json_to_fix)
         except requests.exceptions.ConnectionError as e:
             notify("connection error with server ({})", e)
             return
