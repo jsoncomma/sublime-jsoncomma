@@ -7,9 +7,15 @@ SETTING_VIEW_ENABLED = "jsoncomma_enabled"
 
 
 def should_be_enabled(*, filename, syntax, scope):
-    assert isinstance(filename, str), "filename should be a string"
-    assert isinstance(syntax, str), "syntax should be a string"
-    assert isinstance(scope, str), "scope should be a string"
+    assert isinstance(filename, str), "filename should be a string, got {}".format(
+        type(filename)
+    )
+    assert isinstance(syntax, str), "syntax should be a string, got {}".format(
+        type(syntax)
+    )
+    assert isinstance(scope, str), "scope should be a string, got {}".format(
+        type(scope)
+    )
 
     # notice how this logic could be handled by the server...
     # would it make sense to outsource this? No, because
@@ -63,7 +69,9 @@ class JsonCommaListener(sublime_plugin.ViewEventListener):
         elif explicit is True:
             return True
 
-        return should_be_enabled(filename="", syntax=settings.get("syntax"), scope="")
+        return should_be_enabled(
+            filename="", syntax=settings.get("syntax") or "", scope=""
+        )
 
     @classmethod
     def applies_to_primary_view_only(cls):
@@ -89,14 +97,14 @@ class JsoncommaFixCommand(sublime_plugin.TextCommand):
             self.view.replace(edit, region, server.fix(self.view.substr(region)))
 
     def is_enabled(self):
-        has_non_empty_cell = False
+        has_non_empty_sel = False
         for region in self.view.sel():
             if not region.empty():
-                has_non_empty_cell = True
+                has_non_empty_sel = True
 
-        return has_non_empty_cell or should_be_enabled(
+        return has_non_empty_sel or should_be_enabled(
             filename=self.view.file_name(),
-            syntax=self.view.settings().get("syntax"),
+            syntax=self.view.settings().get("syntax") or "",
             # look at the scope at the end of the file, because it's likely that
             # it'll be where there is a line return (hence the scope will only
             # be the scope name of the general file)
