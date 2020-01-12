@@ -165,7 +165,7 @@ class server:
             # sublime.platform() -> path for executable
             "windows": "%APPDATA%\\jsoncomma\\jsoncomma.exe",
             "linux": "~/.config/jsoncomma/jsoncomma",
-            "os x": "~/Library/Application Support/jsoncomma/jsoncomma",
+            "osx": "~/Library/Application Support/jsoncomma/jsoncomma",
         }
 
         notify("getting last release...")
