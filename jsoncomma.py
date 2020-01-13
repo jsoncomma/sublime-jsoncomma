@@ -100,7 +100,7 @@ class JsoncommaFixCommand(sublime_plugin.TextCommand):
 
         # don't show this command if we are already going to run on save
         if should_be_enabled(
-            filename=self.view.file_name(),
+            filename=self.view.file_name() or "",
             syntax=self.view.settings().get("syntax") or "",
             scope=self.view.scope_name(self.view.size()),
         ):
