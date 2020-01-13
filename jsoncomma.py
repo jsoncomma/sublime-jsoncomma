@@ -96,20 +96,18 @@ class JsoncommaFixCommand(sublime_plugin.TextCommand):
         for region in regions:
             self.view.replace(edit, region, server.fix(self.view.substr(region)))
 
-    def is_enabled(self):
-        has_non_empty_sel = False
-        for region in self.view.sel():
-            if not region.empty():
-                has_non_empty_sel = True
+    def is_visible(self):
 
-        return has_non_empty_sel or should_be_enabled(
+        # don't show this command if we are already going to run on save
+        if should_be_enabled(
             filename=self.view.file_name(),
             syntax=self.view.settings().get("syntax") or "",
-            # look at the scope at the end of the file, because it's likely that
-            # it'll be where there is a line return (hence the scope will only
-            # be the scope name of the general file)
             scope=self.view.scope_name(self.view.size()),
-        )
+        ):
+            return False
 
-    def is_visible(self):
-        return self.is_enabled()
+        # return True if the user has selected some text
+        for region in self.view.sel():
+            if not region.empty():
+                return True
+        return False
