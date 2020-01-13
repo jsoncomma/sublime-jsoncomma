@@ -69,9 +69,11 @@ class server:
             cls.infos = json.loads(line)
         except ValueError as e:
             sublime.error_message(
-                "Failed to start jsoncomma server.\n\n{}\n\nMore details in the console",
-                e,
+                "Failed to start jsoncomma server.\n\n{}\n\nMore details in the console".format(
+                    e
+                )
             )
+            print("output from the server: {!r}".format(line))
             raise e
 
         assert "addr" in cls.infos, "server infos should include 'addr' ({})".format(
