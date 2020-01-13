@@ -1,3 +1,5 @@
 {
-    "executable_path": "jsoncomma"
+    "executable_path": "jsoncomma",
+
+    "automatically_update_executable": true
 }

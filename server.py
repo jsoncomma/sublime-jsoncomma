@@ -11,6 +11,9 @@ import io
 
 SETTINGS = "JSONComma.sublime-settings"
 SETTINGS_EXECUTABLE = "executable_path"
+SETTINGS_AUTO_UPDATE = "automatically_update_executable"
+
+LAST_RELEASE_STORE = "jsoncomma_binary_last_release"
 
 
 class server:
@@ -41,24 +44,38 @@ class server:
                 )
             )
 
-        executable_path = sublime.load_settings(SETTINGS).get(SETTINGS_EXECUTABLE)
+        settings = sublime.load_settings(SETTINGS)
+        executable_path = settings.get(SETTINGS_EXECUTABLE)
         executable_path = os.path.expandvars(os.path.expanduser(executable_path))
 
         if not os.path.exists(executable_path):
             if confirm_automatic_download(executable_path):
                 try:
-                    executable_path = cls.download()
-                except AssertionError as e:
-                    notify("failed to download: {}", e.args[0])
-                    return
-                notify("done downloading jsoncomma to {}".format(executable_path))
+                    executable_path = cls.update_binary()
+                except Exception as e:
+                    notify("failed to download binary: {}", e)
+                    raise e
+                else:
+                    notify("done downloading jsoncomma to {}".format(executable_path))
             else:
                 notify(
                     "executable_path {} doesn't exist, server can't be started.",
                     executable_path,
                 )
+                # no executable to be found, and the user doesn't want auto installs
                 return
 
+        if settings.get(SETTINGS_AUTO_UPDATE):
+            # check for update
+            # FIXME: this shouldn't be done at *every* startup.
+            executable_path = cls.update_binary()
+
+        cls._start(executable_path)
+
+    @classmethod
+    def _start(cls, executable_path: str):
+        """ Just starts the actual process
+        """
         cls.process = subprocess.Popen(
             [executable_path, "server", "-host", "localhost", "-port", "0"],
             stdout=subprocess.PIPE,
@@ -86,9 +103,7 @@ class server:
             cls.infos
         )
 
-        sublime.status_message(
-            "JSONComma: server started on {}".format(cls.infos["addr"])
-        )
+        notify("server started on {}", cls.infos["addr"])
 
     @classmethod
     def stop(cls):
@@ -102,6 +117,7 @@ class server:
         """
 
         if cls.process is None:
+            cls.infos = None
             return
 
         cls.process.terminate()
@@ -145,10 +161,58 @@ class server:
 
         return resp.text
 
+    # downloading/updating the binary
+
     @classmethod
-    def download(cls):
-        """ install the binary in the right location, and store in settings.
-        It returns the location of the binary. """
+    def get_last_release(cls) -> str:
+        """ Gets the latest tag name.
+        """
+        notify("checking last release...")
+        try:
+            resp = requests.get(
+                "https://api.github.com/repos/jsoncomma/jsoncomma/releases"
+            )
+        except requests.ConnectionError as e:
+            notify("couldn't check last version: {}", e)
+            raise e
+
+        assert (
+            resp.status_code == 200
+        ), "[getting last release] expected 200 status code, got {}".format(
+            resp.status_code
+        )
+
+        releases = resp.json()
+        for release in releases:
+            # ignore prereleases and drafts
+            if release["draft"] or release["prerelease"]:
+                continue
+            return release["tag_name"]
+
+        assert False, "no non-draft or non-prerelease release found"
+
+    @classmethod
+    def update_binary(cls):
+        """ install the binary in the right location, and store the path in settings.
+        It returns the location of the binary. This function blocks. """
+
+        latest_tag_name = cls.get_last_release()
+        try:
+            with open(
+                os.path.join(sublime.packages_path(), "User", LAST_RELEASE_STORE)
+            ) as fp:
+                installed_tag_name = fp.read()
+        except FileNotFoundError:
+            # do download the server, because there is currently nothing installed
+            pass
+        else:
+            # compare the tag name, and if it's different (assume it's older), download the update
+            if installed_tag_name == latest_tag_name:
+                notify("latest release installed already")
+                return
+        notify("downloading latest version of jsoncomma {}", latest_tag_name)
+
+        cls.downloading = True
 
         platforms = {
             # sublime.plaform() -> goreleaser's platform names
@@ -170,28 +234,10 @@ class server:
             "osx": "~/Library/Application Support/jsoncomma/jsoncomma",
         }
 
-        notify("getting last release...")
-        # get the latest version
-        resp = requests.get("https://api.github.com/repos/jsoncomma/jsoncomma/releases")
-        assert (
-            resp.status_code == 200
-        ), "[getting last release] expected 200 status code, got {}".format(
-            resp.status_code
-        )
-
-        tag_name = None
-        releases = resp.json()
-        for release in releases:
-            # ignore prereleases and drafts
-            if release["draft"] or release["prerelease"]:
-                continue
-            tag_name = release["tag_name"]
-            break
-
         download_url = (
             "https://github.com/jsoncomma/jsoncomma/releases/download/"
             "{tag_name}/jsoncomma_{tag_name}_{platform}_{arch}.tar.gz".format(
-                tag_name=tag_name,
+                tag_name=latest_tag_name,
                 platform=platforms[sublime.platform()],
                 arch=archs[sublime.arch()],
             )
@@ -213,6 +259,9 @@ class server:
 
         os.makedirs(os.path.dirname(executable_path), exist_ok=True)
 
+        # make sure the server is stopped before we update the binary
+        cls.stop()
+
         notify("extracting tar...")
         with open(executable_path, "wb") as target, tarfile.open(
             mode="r:gz", fileobj=io.BytesIO(resp.content)
@@ -222,7 +271,7 @@ class server:
                 if tarinfo.name.startswith("jsoncomma"):
                     break
 
-            notify("extracting file {}...", tarinfo.name)
+            notify("extracting file {!r}...", tarinfo.name)
 
             fileobj = tar.extractfile(tarinfo.name)
             assert fileobj is not None, "extracted {}, but got None".format(
@@ -242,6 +291,13 @@ class server:
         settings.set(SETTINGS_EXECUTABLE, paths[sublime.platform()])
         sublime.save_settings(SETTINGS)
 
+        with open(
+            os.path.join(sublime.packages_path(), "User", LAST_RELEASE_STORE), "w"
+        ) as fp:
+            fp.write(latest_tag_name)
+
+        notify("done, jsoncomma binary at {!r}", executable_path)
+
         # FIXME: maybe we should have a platform dependent settings file...
         return executable_path
 
@@ -250,10 +306,10 @@ def confirm_automatic_download(current_path):
     # I'm not sure how I can make it clear that this is a one time thing.
     # if the user wants to update the server, he will have to do so manually
     return sublime.ok_cancel_dialog(
-        "The jsoncomma server was not found at '{}'. ".format(current_path)
-        + "However, it needs to be installed for JSONComma to work. More "
-        "details can be found at https://jsoncomma.github.io"
-        "\n\n"
+        "The jsoncomma server was not found at '{}'. "
+        "However, it needs to be installed for JSONComma to work. "
+        "More details can be found at https://jsoncomma.github.io"
+        "\n\n".format(current_path),
         "Do you want JSONComma to install it for you?",
         "Download jsoncomma for me",
     )
