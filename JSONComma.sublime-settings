@@ -1,5 +1,14 @@
 {
-    "executable_path": "jsoncomma",
+    // JSONComma will always ask you for confirmation to automatically
+    // download the binary if it isn't found at executable_path
+    // if you answer no, then this setting will be set to false.
+    // unless you are contributing (as a developper) to jsoncomma *currently*,
+    // it is recommended that you set this to true.
+    "automatically_update_executable": true,
 
-    "automatically_update_executable": true
+    // this setting is ignored if automatically_update_executable is set to true
+    // ie. make sure automatically_update_executable is set to false if you want to
+    //     use your own binary
+    // default "jsoncomma"
+    "executable_path": "jsoncomma"
 }
