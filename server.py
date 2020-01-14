@@ -22,27 +22,21 @@ class server:
     downloading = False
 
     @classmethod
-    def assert_ready(cls):
-        assert (
-            cls.downloading is False
-        ), "downloading the server (jsoncomma exectutable)"
-        assert cls.process is not None, "the server process isn't running"
-        assert (
-            cls.infos is not None
-        ), "still gathering information about the server's address"
+    def is_ready(cls):
+        if cls.downloading is True:
+            return False, "downloading the server (json executable)"
+        if cls.process is None:
+            return False, "the server process isn't running"
+        if cls.infos is None:
+            return False, "still gatherring information about hte server's address"
+        return True, ""
 
     @classmethod
     def start(cls):
-        try:
-            cls.assert_ready()
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError(
-                "server already running. process: {} infos: {}".format(
-                    cls.process, cls.infos
-                )
-            )
+        running, msg = cls.is_ready()
+        assert running is False, "msg: {}, process: {}, infos: {}".format(
+            msg, cls.process, cls.infos
+        )
 
         settings = sublime.load_settings(SETTINGS)
         executable_path = settings.get(SETTINGS_EXECUTABLE)
@@ -82,7 +76,7 @@ class server:
 
         # hide the terminal window on Windows
         startupinfo = None
-        if os.name == 'nt':
+        if os.name == "nt":
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
@@ -90,7 +84,7 @@ class server:
             [executable_path, "server", "-host", "localhost", "-port", "0"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            startupinfo=startupinfo
+            startupinfo=startupinfo,
         )
 
         line = cls.process.stdout.readline().decode("utf-8")
@@ -129,6 +123,7 @@ class server:
         """
 
         if cls.process is None:
+            # we can get here if the user closes sublime whilst the server is downloading/not ready
             cls.infos = None
             return
 
@@ -145,7 +140,10 @@ class server:
 
     @classmethod
     def fix(cls, json_to_fix):
-        cls.assert_ready()
+        running, msg = cls.is_ready()
+        if running is False:
+            notify("{} (process: {}, infos: {})".format(msg, cls.process, cls.infos))
+            return
 
         try:
             resp = requests.post("http://" + cls.infos["addr"], data=json_to_fix)
