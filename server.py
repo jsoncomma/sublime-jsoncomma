@@ -76,11 +76,20 @@ class server:
     def _start(cls, executable_path: str):
         """ Just starts the actual process
         """
+
+        # hide the terminal window on Windows
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
         cls.process = subprocess.Popen(
             [executable_path, "server", "-host", "localhost", "-port", "0"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            startupinfo=startupinfo
         )
+
         line = cls.process.stdout.readline().decode("utf-8")
         try:
             cls.infos = json.loads(line)
