@@ -65,10 +65,13 @@ class server:
                 # no executable to be found, and the user doesn't want auto installs
                 return
 
-        if settings.get(SETTINGS_AUTO_UPDATE):
+        elif settings.get(SETTINGS_AUTO_UPDATE):
             # check for update
             # FIXME: this shouldn't be done at *every* startup.
-            executable_path = cls.update_binary()
+            new_path = cls.update_binary()
+            # new path is none if no update was required
+            if new_path is not None:
+                executable_path = new_path
 
         cls._start(executable_path)
 
@@ -318,8 +321,8 @@ def confirm_automatic_download(current_path):
         "The jsoncomma server was not found at '{}'. "
         "However, it needs to be installed for JSONComma to work. "
         "More details can be found at https://jsoncomma.github.io"
-        "\n\n".format(current_path),
-        "Do you want JSONComma to install it for you?",
+        "\n\n"
+        "Do you want JSONComma to install it for you?".format(current_path),
         "Download jsoncomma for me",
     )
 
