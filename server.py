@@ -15,31 +15,27 @@ SETTINGS_AUTO_UPDATE = "automatically_update_executable"
 
 
 class server:
-    process = None
-    infos = None
-    downloading = False
 
-    @classmethod
-    def is_ready(cls):
-        if cls.downloading is True:
-            return False, "downloading the server (json executable)"
-        if cls.process is None:
-            return False, "the server process isn't running"
-        if cls.infos is None:
-            return False, "still gatherring information about hte server's address"
-        return True, ""
+    """ This server is more complex that it should be because sublime text
+    doesn't have an on_exit event (hence we can't kill the server)
+
+    Instead, we always use the same port (and assume it jsoncomma running on
+    it). If we need to shut it down (for example to update), we send a
+    /shutdown request because we have no guarantee that it is our process
+    that owns the server process.
+    """
+
+    HOST = "localhost"
+    PORT = 2442
+
+    downloading = False
 
     @classmethod
     def start(cls):
         """ Starts the server, downloading updates if needed
         """
 
-        running, msg = cls.is_ready()
-        assert running is False, "msg: {}, process: {}, infos: {}".format(
-            msg, cls.process, cls.infos
-        )
-
-        # this is some shit logic, but it needs to cover all those paths
+        # this is some bad logic, but it needs to cover all those paths
         # auto updates on, executable doesn't exists (require update)
         # auto updates on, executable exists (try to update)
         # auto updates off, exectuable doesn't exists (ask to enable auto updates)
@@ -82,13 +78,21 @@ class server:
                         "failed to automatically download server due to network error, running current version"
                     )
 
-        cls.process = start_process(
-            [executable_path, "server", "-host", "localhost", "-port", "0"],
+        # we don't store the process, see comment under server
+        process = start_process(
+            [
+                executable_path,
+                "server",
+                "-host",
+                server.HOST,
+                "-port",
+                str(server.PORT),
+            ],
         )
 
-        line = cls.process.stdout.readline().decode("utf-8")
+        line = process.stdout.readline().decode("utf-8")
         try:
-            cls.infos = json.loads(line)
+            infos = json.loads(line)
         except ValueError as e:
             sublime.error_message(
                 "Failed to start jsoncomma server.\n\n{}\n\nMore details in the console".format(
@@ -98,50 +102,82 @@ class server:
             print("JSONComma: output from the server: {!r}".format(line))
             raise e
 
-        assert "addr" in cls.infos, "server infos should include 'addr' ({})".format(
-            cls.infos
-        )
-        assert "port" in cls.infos, "server infos should include 'port' ({})".format(
-            cls.infos
-        )
-        assert "host" in cls.infos, "server infos should include 'host' ({})".format(
-            cls.infos
-        )
+        assert "kind" in infos, "expected 'kind' field in {}".format(infos)
 
-        notify("server {} started on {}", executable_path, cls.infos["addr"])
+        if infos["kind"] == "error":
+            assert "error" in infos, "expected 'error' field in {}".format(infos)
+            assert "details" in infos, "expected 'details' field in {}".format(infos)
+            assert "context" in infos, "expected 'context' field in {}".format(infos)
+
+            print("JSONComma:", infos)
+            print("JSONComma: assume already running")
+            return
+
+        assert infos["kind"] == "started", "expected started kind in {}".format(infos)
+
+        assert "addr" in infos, "server infos should include 'addr' ({})".format(infos)
+        assert "port" in infos, "server infos should include 'port' ({})".format(infos)
+        assert "host" in infos, "server infos should include 'host' ({})".format(infos)
+
+        # we can't assert about host because, for example, we might listen on "localhost",
+        # the server will reply 127.0.0.1. We could do gethostbyname, but that's probably
+        # an over kill
+        assert (
+            infos["port"] == server.PORT
+        ), "server started on port {}, expected {}".format(infos["port"], server.PORT)
+
+        notify("server {} started on {}", executable_path, infos["addr"])
 
     @classmethod
     def stop(cls):
-        """ stops the server
+        """ stops the server. It is safe even if the server is dead.
 
-        First, try to terminate the server (SIGTERM), waiting (block) for 1
-        second at most. If it doesn't shutdown in that time, then SIGKILL is
-        sent.
-
-        On windows, process.terminate() is equivalent to process.kill()
+        This function blocks, because wait for the server to close all of it's handlers.
         """
 
-        if cls.process is None:
-            # we can get here if the user closes sublime whilst the server is downloading/not ready
-            cls.infos = None
+        try:
+            resp = requests.get(
+                "http://{host}:{port}/shutdown".format(
+                    host=server.HOST, port=server.PORT
+                ),
+                stream=True,
+            )
+        except requests.ConnectionError as e:
+            # this is the best we can do to check that we got a ConnectionRefusedError
+            # after than, we get string, wtf urllib3. e.args[0].reason.args[0] is a
+            # string.
+            # we could try to parse the string... But that's not worth it.
+            assert isinstance(
+                e.args[0].reason,
+                requests.packages.urllib3.exceptions.NewConnectionError,
+            ), "expected NewConnectionError, got {}".format(e.args[0].reason)
+            # the server isn't running
             return
 
-        kill_nicely(cls.process)
+        line = resp.raw.readline().decode("utf-8")
+        try:
+            data = json.loads(line)
+        except ValueError as e:
+            print("JSONComma: first line after /shutdown: {!r}".format(line))
+            raise e
 
-        cls.process = None
-        cls.infos = None
-        notify("JSONComma: server stopped")
+        assert (
+            "timedout" in data
+        ), "response should include 'timedout' field ({})".format(data)
+
+        if data["timedout"] is True:
+            notify("JSONComma: server aborted")
+        else:
+            notify("JSONComma: server gracefully shutdown")
 
     @classmethod
     def fix(cls, json_to_fix):
-        running, msg = cls.is_ready()
-        if running is False:
-            notify("{} (process: {}, infos: {})".format(msg, cls.process, cls.infos))
-            return
-
         try:
-            resp = requests.post("http://" + cls.infos["addr"], data=json_to_fix)
-        except requests.exceptions.ConnectionError as e:
+            resp = requests.post(
+                "http://{host}:{port}".format(port=server.PORT, host=server.HOST),
+                data=json_to_fix,
+            )
+        except requests.ConnectionError as e:
             notify("connection error with server ({})", e)
             return
 
@@ -188,7 +224,11 @@ class server:
             current_version = cls.get_current_executable_version(executable_path)
         except FileNotFoundError as e:
             # we are going to download it
-            notify("current version: non existent, latest version: {}", latest_version)
+            notify(
+                "current version: non existent ({!r}), latest version: {}",
+                e,
+                latest_version,
+            )
         else:
             if current_version == latest_version:
                 # don't need to update
@@ -229,6 +269,7 @@ class server:
         # We don't stream the download because tarfile can't extract file if you
         # don't have a seek method (and setting stream=True gives you a file object
         # without seek)
+        # let any network error boil up the stack, it's cleaner when handled above
         resp = requests.get(download_url)
         assert (
             resp.status_code == 200
