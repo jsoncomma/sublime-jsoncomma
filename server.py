@@ -178,7 +178,14 @@ class server:
                 data=json_to_fix,
             )
         except requests.ConnectionError as e:
-            notify("connection error with server ({})", e)
+            if cls.downloading:
+                notify("downloading/updating the server, please wait")
+                return
+            cls.start()
+            notify(
+                "connection error with server ({}), started server, gave up trying to correct (save again to trigger)",
+                e,
+            )
             return
 
         if resp.status_code != 200:
@@ -218,6 +225,8 @@ class server:
 
         executable_path = cls.get_default_executable_path(expand_vars=True)
 
+        cls.downloading = True
+
         latest_version = cls.get_latest_version()
 
         try:
@@ -239,8 +248,6 @@ class server:
                     current_version, latest_version
                 )
             )
-
-        cls.downloading = True
 
         platforms = {
             # sublime.plaform() -> goreleaser's platform names

@@ -83,11 +83,6 @@ class JsonCommaListener(sublime_plugin.ViewEventListener):
 
 class JsoncommaFixCommand(sublime_plugin.TextCommand):
     def run(self, edit, ranges=None):
-        try:
-            server.assert_ready()
-        except AssertionError as e:
-            notify("couldn't fix {}: {}", self.view.file_name(), e.args[0])
-
         if ranges is not None:
             regions = (sublime.Region(*range) for range in ranges)
         else:
