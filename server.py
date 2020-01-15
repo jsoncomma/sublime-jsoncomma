@@ -25,7 +25,14 @@ class server:
     that owns the server process.
     """
 
-    HOST = "localhost"
+    # make sure we explicitely use IPv6 or IPv4, because otherwise, if the client
+    # and the server don't use the same by defaut, Windows will have a one second
+    # timeout (eg. server runs on IPv6, client on IPv4. On Windows, it'll try IPv4,
+    # timeout after one second, and *then* try IPv6. So, it blocks the editor).
+    # https://github.com/jsoncomma/sublime-jsoncomma/issues/10#issuecomment-574889982
+    # So, we force IPv4 because it looks like it's a pain to force IPv6 with
+    # requests
+    HOST = "127.0.0.1"
     PORT = 2442
 
     downloading = False
