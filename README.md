@@ -20,6 +20,16 @@ Similarly, you can explicitly *enable* it for any syntax you want. All it takes 
 
 If JSONComma is disabled for the current view (as in it won't run on save), you can fix up some specific text by selecting it and searching up in the command palette `JSONComma: Fix Selection`.
 
+## Automatic download
+
+JSONComma can automatically download the `jsoncomma` server for you. If you accept it, this package will keep it updated for you. For the curious, here is where the binary is download on your system:
+
+| Platform | Location                                            |
+| -------- | --------------------------------------------------- |
+| Windows  | `%APPDATA%\jsoncomma\jsoncomma.exe`               |
+| Mac OS   | `~/Library/Application Support/jsoncomma/jsoncomma` |
+| Linux    | `$XDG_DATA_HOME/.local/share/jsoncomma/jsoncomma`   |
+
 ## Note about naming
 
 In general, you should refer to jsoncomma all in lower case. It's just that this plugin for Sublime Text has upper case letters to fit with the editor's style.
