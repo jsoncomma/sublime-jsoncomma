@@ -119,7 +119,9 @@ class server:
             assert "details" in infos, "expected 'details' field in {}".format(infos)
             assert "context" in infos, "expected 'context' field in {}".format(infos)
 
-            print("JSONComma:", infos)
+            if infos["context"] != "opening socket":
+                print("JSONComma: unexpected error trying to open new server", infos)
+
             print("JSONComma: assume already running")
             return
 
