@@ -253,6 +253,7 @@ class server:
         else:
             if current_version == latest_version:
                 # don't need to update
+                cls.downloading = False
                 return executable_path
 
             notify(
