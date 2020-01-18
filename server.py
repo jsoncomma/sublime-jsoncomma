@@ -57,7 +57,10 @@ class server:
             executable_path = settings.get(SETTINGS_EXECUTABLE)
             executable_path = os.path.expanduser(os.path.expandvars(executable_path))
 
-        if not os.path.exists(executable_path):
+        if not os.path.exists(executable_path) and not fixed_wrong_location(
+            executable_path
+        ):
+
             if not confirm_automatic_download(executable_path):
                 notify(
                     "no binary found, and automatic updates disabled. JSONComma will not work"
@@ -365,15 +368,21 @@ class server:
             expand_vars, bool
         ), "expand_vars should be a boolean, got {}".format(type(expand_vars))
 
-        path = {
-            # sublime.platform() -> path for executable
-            "windows": "%APPDATA%\\jsoncomma\\jsoncomma.exe",
-            "linux": "~/.config/jsoncomma/jsoncomma",
-            "osx": "~/Library/Application Support/jsoncomma/jsoncomma",
-        }[sublime.platform()]
+        path = None
+        platform = sublime.platform()
+        if platform == "windows":
+            path = "%APPDATA%\\jsoncomma\\jsoncomma.exe"
+        elif platform == "osx":
+            path = "~/Library/Application Support/jsoncomma/jsoncomma"
+        elif platform == "linux":
+            xdg_data_home = os.environ.get("XDG_DATA_HOME", "") or "~/.local/share"
+            path = os.path.join(xdg_data_home, "jsoncomma", "jsoncomma")
+
+        assert path is not None, "unknown platform {!r}".format(platform)
 
         if expand_vars:
             return os.path.expandvars(os.path.expanduser(path))
+
         return path
 
 
@@ -429,3 +438,45 @@ def kill_nicely(process, *, timeout=1):
     except subprocess.TimeoutExpired:
         process.kill()
     return process.poll()
+
+
+def fixed_wrong_location(new_path):
+    """ I stuffed the location of the binary executable initially, and @WillMoggridge
+    pointed me towards the relevant document and paths I should use.
+
+    So, this is an automatic fix for my mistake
+
+    This returns True if it did fix anything
+    """
+    if sublime.platform() != "linux":
+        return False
+
+    old_path = os.path.expanduser("~/.config/jsoncomma/jsoncomma")
+
+    if not os.path.isfile(old_path):
+        return False
+
+    # we know what new_path doesn't exists because otherwise, this fixup wouldn't have been
+    # called
+
+    try:
+        os.makedirs(os.path.dirname(new_path), exist_ok=True)
+        os.rename(old_path, new_path)
+        # we shouldn't have any other files in old_path's folder. If we do, rmdir is going
+        # to fail (which we want it to, don't want to remove files we haven't put there)
+        os.rmdir(os.path.dirname(old_path))
+    except OSError:
+        import traceback
+
+        sublime.error_message(
+            "Failed trying to automatically move {} to {}. Accept the automatic update"
+            "that is going to show up next, and then delete the folder "
+            "~/.config/jsoncomma. More details about the error in the console".format(
+                old_path, new_path
+            )
+        )
+        print("JSONComma: automatic fixup error:")
+        traceback.print_exc()
+        return False
+
+    return True
